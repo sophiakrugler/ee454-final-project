@@ -16,7 +16,7 @@ maxPool6x6 uut(
     .input_array(data_in), 
     .output_max(data_out),
     .done(done)
-);
+); 
 
 always #5 clk = ~clk; // Clock period of 10 time units
 
@@ -39,7 +39,6 @@ initial begin
     20 22 24
     32 34 36
    **************************************************/
-
     data_in[0][0] = 8'd1; data_in[0][1] = 8'd2; data_in[0][2] = 8'd3; data_in[0][3] = 8'd4; data_in[0][4] = 8'd5; data_in[0][5] = 8'd6;
     data_in[1][0] = 8'd7; data_in[1][1] = 8'd8; data_in[1][2] = 8'd9; data_in[1][3] = 8'd10; data_in[1][4] = 8'd11; data_in[1][5] = 8'd12;
     data_in[2][0] = 8'd13; data_in[2][1] = 8'd14; data_in[2][2] = 8'd15; data_in[2][3] = 8'd16; data_in[2][4] = 8'd17; data_in[2][5] = 8'd18;

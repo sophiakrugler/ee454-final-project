@@ -1,6 +1,3 @@
-// This module doesn't compile becuase verilog does not accept multidimensional arrays as inputs or outputs. 
-// We will need to adjust the module to accept an address in memory instead.
-
 // This module calculates the maximum value of a region of an input array. 
 // The input array is of size 6x6 and the window size is 2x2 with a stride of 2.
 // The output array is of size 3x3.
@@ -13,7 +10,7 @@
 
 module maxPool6x6(
     input clk,
-    input enable, // Unfortunately, we can't pass a 6x6 array directly
+    input enable,
     input [7:0] input_array[5:0][5:0], // 6x6, 8 bit wide input array
     output reg [7:0] output_max[2:0][2:0], // 3x3, 8 bit wide output array
     output reg done
@@ -28,7 +25,6 @@ always@(posedge clk) begin
         case(state)
             IDLE: begin
                 state <= CALC_MAX_ROW;
-                done <= 0;
             end
             CALC_MAX_ROW: begin
                 max_per_slide[0][0] <= (input_array[0][0] > input_array[0][1]) ? input_array[0][0] : input_array[0][1];
@@ -67,12 +63,14 @@ always@(posedge clk) begin
                 output_max[2][2] <= (max_per_slide[4][2] > max_per_slide[5][2]) ? max_per_slide[4][2] : max_per_slide[5][2];
 
                 state <= DONE;
-                done <= 1;
             end
             DONE: begin
-                state <= IDLE;
+                done <= 1;
             end
         endcase
+    end else begin
+        state <= IDLE;
+        done <= 0;
     end
 end
 
