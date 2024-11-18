@@ -1,5 +1,5 @@
 // This module calculates the convolution of an 8x8 image and spits out a 6x6
-// by running a 3x3 kernel over it. The data depth is 
+// by running a 3x3 kernel over it. The data depth is TBD.
 
 `timescale 1ns / 1ps
 
