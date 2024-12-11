@@ -1,4 +1,4 @@
-`timescale  1ns / 1ps
+`timescale  1ps / 1ps
 
 module convolution8_tb(
     output reg clk, rst,
@@ -47,7 +47,7 @@ initial begin
     // ----- DEFINE KERNEL ----- //
     example_kernel <= 0;
     for (pixel = 0; pixel < 9; pixel = pixel +1) begin
-        example_kernel[71-(pixel*8) -: 8] <= 1'b0;
+        example_kernel[71-(pixel*8) -: 8] <= pixel;
     end
 
     // test signals
@@ -55,8 +55,8 @@ initial begin
     #1 rst = 1;
     #1 rst = 0;
     #1 i_featuremap = example_image;
-    #1 kernel = example_kernel;
-    #2 $finish;
+    kernel = example_kernel;
+    #10 $finish;
 end
 
 endmodule

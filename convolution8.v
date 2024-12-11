@@ -6,6 +6,7 @@
 // set o_featuremap size = (N-2)*(N-2)*depth
 // update parameter STARTING_SIZE to new N value
 
+`timescale  1ps / 1ps
 
 // This convolution module will take in an 8x8, and produce a 6x6
 module convolution8#(
@@ -35,12 +36,32 @@ reg [ELEMENT_SIZE-1 : 0] kernel_pixel; // represents a single element of the ker
 
 // counters used later
 // TODO: to optimize registers, change these to reg type instead of integer, which are each 32-bit
-integer row_index, column_index, patch_element, row_offset, element_column, element_row, image_index; 
-integer SCALE_FACTOR = 255; // TODO: find a way to generalize this
+reg [3:0] row_index, column_index, patch_element, element_column, element_row, image_index; 
+reg [7:0] SCALE_FACTOR = 255; // TODO: find a way to generalize this
 integer MAX_PATCH_SUM = 586305; // 255(max 8-bit value) * 255(max 8-bit value) * 9
 reg [31:0] scaled_sum;
-
 reg [19:0] patch_sum;
+//reg [8:0] row_offset;
+reg [8:0] output_index;
+
+//row_offset = (STARTING_SIZE * ELEMENT_SIZE); // each row is seperated by the number of elements in a row * size of elements
+
+// Debugging Tools
+always @(patch_sum) begin
+    $display("[%0t] patch_sum changed: %h", $time, patch_sum);
+end
+
+always @(column_index) begin
+    $display("[%0t] column_index changed: %h", $time, column_index);
+end
+
+always @(row_index) begin
+    $display("[%0t] row_index changed: %h", $time, row_index);
+end
+
+always @(kernel) begin
+    $display("[%0t] row_index changed: %h", $time, row_index);
+end
 
 always @(posedge clk or posedge rst) begin
     // implement positive rst logic
@@ -51,17 +72,16 @@ always @(posedge clk or posedge rst) begin
     end else begin
         for (row_index = 0; row_index < STARTING_SIZE - WINDOW_SIZE + 1; row_index = row_index + 1) begin
             for (column_index = 0; column_index < STARTING_SIZE - WINDOW_SIZE + 1; column_index = column_index + 1) begin
-                patch_sum = 0; // reset the sum each time
+                o_featuremap <= 0; // reset the output featuremap
+                patch_sum <= 0; // reset the sum each time
 
                 // ---------- PATCH CREATION ----------//
-                row_offset = (STARTING_SIZE * ELEMENT_SIZE); // each row is seperated by the number of elements in a row * size of elements
-                
                 // Create patch starting top left and navigating to the right, then go down 1 and all the way back over left
                 for (patch_element = 0; patch_element < WINDOW_SIZE*WINDOW_SIZE; patch_element = patch_element + 1) begin
 
                     element_column = patch_element % WINDOW_SIZE; // the elements column
                     element_row = patch_element / WINDOW_SIZE; // the elements row
-                    image_index = (STARTING_SIZE * STARTING_SIZE * ELEMENT_SIZE - 1) - (element_row * row_offset) - (element_column * ELEMENT_SIZE); // the upper bit location of this pixel
+                    image_index = (STARTING_SIZE * STARTING_SIZE * ELEMENT_SIZE - 1) - (element_row * (STARTING_SIZE * ELEMENT_SIZE)) - (element_column * ELEMENT_SIZE); // the upper bit location of this pixel
                     
                     window_patch_pixel = i_featuremap[image_index -: ELEMENT_SIZE]; // extracts the desired image pixel
                     kernel_pixel = kernel[((WINDOW_SIZE * WINDOW_SIZE - patch_element) * ELEMENT_SIZE - 1) -: ELEMENT_SIZE]; // extracts desired kernel pixel
@@ -73,11 +93,15 @@ always @(posedge clk or posedge rst) begin
             
             scaled_sum = (patch_sum * SCALE_FACTOR) / MAX_PATCH_SUM;
 
+            output_index = (((STARTING_SIZE - WINDOW_SIZE + 1) * (STARTING_SIZE - WINDOW_SIZE + 1)) * ELEMENT_SIZE - 1) - (ELEMENT_SIZE*column_index) - ((STARTING_SIZE * ELEMENT_SIZE)*row_index);
+
             // assign the summation to the featuremap
-            o_featuremap[(((STARTING_SIZE - WINDOW_SIZE + 1) * (STARTING_SIZE - WINDOW_SIZE + 1)) * ELEMENT_SIZE)-1 - (ELEMENT_SIZE) - (row_offset) -: ELEMENT_SIZE] <= scaled_sum[7:0]; 
-            
+            //feature_map[(((STARTING_SIZE - WINDOW_SIZE + 1) * (STARTING_SIZE - WINDOW_SIZE + 1)) * ELEMENT_SIZE)-1 - (ELEMENT_SIZE) - (row_offset) -: ELEMENT_SIZE] = scaled_sum[7:0]; 
+            feature_map[output_index -: ELEMENT_SIZE] = scaled_sum [7:0];
             end // of a column
         end // of a row
+
+        o_featuremap <= feature_map;
     end
 end
 
