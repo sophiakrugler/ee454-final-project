@@ -36,6 +36,8 @@ reg [ELEMENT_SIZE-1 : 0] kernel_pixel; // represents a single element of the ker
 
 // counters used later
 integer row_index, column_index, patch_element, row_offset;
+integer SCALE_FACTOR = 255; // TODO: find a way to generalize this
+integer MAX_PATCH_SUM = 586305; // 255(max 8-bit value) * 255(max 8-bit value) * 9
 
 reg [19:0] patch_sum;
 
@@ -56,8 +58,8 @@ always @(posedge clk or posedge rst) begin
                 // Create patch starting top left and navigating to the right, then go down 1 and all the way back over left
                 for (patch_element = 0; patch_element < WINDOW_SIZE*WINDOW_SIZE; patch_element = patch_element + 1) begin
 
-                    integer element_column = patch_element % 3; // the elements column
-                    integer element_row = patch_element / 3; // the elements row
+                    integer element_column = patch_element % WINDOW_SIZE; // the elements column
+                    integer element_row = patch_element / WINDOW_SIZE; // the elements row
                     image_index = (STARTING_SIZE * STARTING_SIZE * ELEMENT_SIZE - 1) - (element_row * row_offset) - (element_column * ELEMENT_SIZE); // the upper bit location of this pixel
                     
                     window_patch_pixel = i_featuremap[image_index -: ELEMENT_SIZE]; // extracts the desired image pixel
@@ -66,8 +68,12 @@ always @(posedge clk or posedge rst) begin
                     patch_sum = patch_sum + (window_patch_pixel * kernel_pixel);
                 end
 
+            // Normalize the sum to fit into an 8-bit featuremap element
+            unsigned [31:0] scaled_sum;
+            scaled_sum = (patch_sum * SCALE_FACTOR) / MAX_PATCH_SUM;
+
             // assign the summation to the featuremap
-            o_featuremap[(((STARTING_SIZE - WINDOW_SIZE + 1) * (STARTING_SIZE - WINDOW_SIZE + 1)) * ELEMENT_SIZE)-1 - (column_offset) - (row_offset) -: ELEMENT_SIZE] = patch_sum; 
+            o_featuremap[(((STARTING_SIZE - WINDOW_SIZE + 1) * (STARTING_SIZE - WINDOW_SIZE + 1)) * ELEMENT_SIZE)-1 - (column_offset) - (row_offset) -: ELEMENT_SIZE] = scaled_sum[7:0]; 
             
             end // of a column
         end // of a row
