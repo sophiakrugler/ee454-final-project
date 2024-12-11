@@ -28,7 +28,7 @@ module convolution8#(
 // patch row indicies: [71:48], [47:24], [23:0]
 
 // register to act as an array
-reg [(((STARTING_SIZE - WINDOW_SIZE + 1) * (STARTING_SIZE - WINDOW_SIZE + 1))*ELEMENT_SIZE)-1:0] feature_map;
+reg [(((STARTING_SIZE - WINDOW_SIZE + 1) * (STARTING_SIZE - WINDOW_SIZE + 1))*ELEMENT_SIZE)-1:0] feature_map = 0;
 
 // register to act as the window's array
 reg [ELEMENT_SIZE-1 : 0] window_patch_pixel; // represents a single element of the window patch
@@ -36,13 +36,14 @@ reg [ELEMENT_SIZE-1 : 0] kernel_pixel; // represents a single element of the ker
 
 // counters used later
 // TODO: to optimize registers, change these to reg type instead of integer, which are each 32-bit
-reg [3:0] row_index, column_index, patch_element, element_column, element_row, image_index; 
+reg [3:0] row_index, column_index, patch_element, element_column, element_row; 
 reg [7:0] SCALE_FACTOR = 255; // TODO: find a way to generalize this
 integer MAX_PATCH_SUM = 586305; // 255(max 8-bit value) * 255(max 8-bit value) * 9
-reg [31:0] scaled_sum;
-reg [19:0] patch_sum;
+reg [31:0] scaled_sum = 0;
+reg [19:0] patch_sum = 0;
 //reg [8:0] row_offset;
 reg [8:0] output_index;
+reg [8:0] image_index;
 
 //row_offset = (STARTING_SIZE * ELEMENT_SIZE); // each row is seperated by the number of elements in a row * size of elements
 
@@ -69,6 +70,8 @@ always @(posedge clk or posedge rst) begin
     // TODO: implement positive reset for the feature map
     // just reset the output for now?
         o_featuremap <= 0;
+        feature_map <= 0;
+        patch_sum <= 0;
     end else begin
         for (row_index = 0; row_index < STARTING_SIZE - WINDOW_SIZE + 1; row_index = row_index + 1) begin
             for (column_index = 0; column_index < STARTING_SIZE - WINDOW_SIZE + 1; column_index = column_index + 1) begin
@@ -89,18 +92,18 @@ always @(posedge clk or posedge rst) begin
                     patch_sum = patch_sum + (window_patch_pixel * kernel_pixel);
                 end
 
-            // Normalize the sum to fit into an 8-bit featuremap element
-            
-            scaled_sum = (patch_sum * SCALE_FACTOR) / MAX_PATCH_SUM;
-
-            output_index = (((STARTING_SIZE - WINDOW_SIZE + 1) * (STARTING_SIZE - WINDOW_SIZE + 1)) * ELEMENT_SIZE - 1) - (ELEMENT_SIZE*column_index) - ((STARTING_SIZE * ELEMENT_SIZE)*row_index);
-
-            // assign the summation to the featuremap
-            //feature_map[(((STARTING_SIZE - WINDOW_SIZE + 1) * (STARTING_SIZE - WINDOW_SIZE + 1)) * ELEMENT_SIZE)-1 - (ELEMENT_SIZE) - (row_offset) -: ELEMENT_SIZE] = scaled_sum[7:0]; 
-            feature_map[output_index -: ELEMENT_SIZE] = scaled_sum [7:0];
+                // Normalize the sum to fit into an 8-bit featuremap element
+                
+                scaled_sum = (patch_sum * SCALE_FACTOR) / MAX_PATCH_SUM;
+    
+                output_index = (((STARTING_SIZE - WINDOW_SIZE + 1) * (STARTING_SIZE - WINDOW_SIZE + 1)) * ELEMENT_SIZE - 1) - (ELEMENT_SIZE*column_index) - ((STARTING_SIZE * ELEMENT_SIZE)*row_index);
+    
+                // assign the summations to the featuremap
+                $display("[%0t] row_index: %d, column_index: %d, patch_sum: %d", $time, row_index, column_index, patch_sum);
+                feature_map[output_index -: ELEMENT_SIZE] = scaled_sum [7:0];
             end // of a column
         end // of a row
-
+        
         o_featuremap <= feature_map;
     end
 end
