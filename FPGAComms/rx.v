@@ -31,7 +31,7 @@ always @(posedge clk or posedge reset)begin //simple clock divider for reciever.
 		slow_clock <= 0;
 		slow_counter <= 0;
 	end else begin
-		if (slow_counter == 216) begin // 5208 / 217 = 24
+		if (slow_counter == 217) begin // 5208 / 217 = 24
 			slow_clock <= ~slow_clock;
 			slow_counter <= 0;
 		end else begin
@@ -65,7 +65,7 @@ always @(posedge slow_clock or posedge reset) begin
 					sample_counter <= sample_counter + 1;
 			end
 			RX_DATA : begin
-				if (sample_counter == 23) begin
+				if (sample_counter == 11) begin
 					sample_counter <= 0;
 					temp_data[bitCounter] <= rx_sync;
 					if (bitCounter == 7) begin

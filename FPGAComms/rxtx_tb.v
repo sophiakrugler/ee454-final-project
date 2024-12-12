@@ -35,7 +35,7 @@ module rxtx_tb();
 		clk <= 0;
 		rst <= 1;
 		en <= 0;
-		data <= 8'b0101_0101;
+		data <= 8'b1111_1111;
 		
 		#5 rst <= 0;
 		#5000
