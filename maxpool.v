@@ -19,9 +19,6 @@ module maxpool#(
 
 localparam WINDOW_SIZE = STARTING_SIZE / ENDING_SIZE; // 26 / 2 = 13
 
-// register to act as an array
-reg [ENDING_SIZE*ENDING_SIZE*ELEMENT_SIZE-1:0] feature_map = 0;
-
 // counters used later
 reg [5:0] row_index, column_index, element_row, element_col;
 reg [ELEMENT_SIZE-1 : 0] element_max;
@@ -31,7 +28,6 @@ reg [STARTING_SIZE - 1:0] image_index; // Max value of image index is STARTING_S
 always @(posedge clk or posedge rst) begin
     if (rst) begin
         o_featuremap <= 0;
-        feature_map <= 0;
 	    done <= 0;
     end else if (en && !done) begin
         for (row_index = 0; row_index < ENDING_SIZE; row_index = row_index + 1) begin
@@ -53,11 +49,9 @@ always @(posedge clk or posedge rst) begin
         
                 // assign the summations to the featuremap
                 $display("row_index: %d, column_index: %d, max: %d", row_index, column_index, element_max);
-                feature_map[output_index -: ELEMENT_SIZE] = element_max;
+                o_featuremap[output_index -: ELEMENT_SIZE] = element_max;
             end // of a column
         end // of a row
-        
-        o_featuremap <= feature_map;
 	    done <= 1;
     end
 end

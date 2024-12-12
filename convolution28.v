@@ -28,7 +28,6 @@ module convolution28#(
 ); 
 
 // register to act as an array
-reg [ENDING_SIZE*ENDING_SIZE*ENDING_ELEMENT_SIZE-1:0] feature_map = 0;
 
 // register to act as the window's array
 reg [ELEMENT_SIZE-1 : 0] window_patch_pixel; // represents a single element of the window patch
@@ -49,9 +48,8 @@ always @(posedge clk or posedge rst) begin
     // implement positive rst logic
     if (rst) begin
         o_featuremap <= 0;
-        feature_map <= 0;
         patch_sum <= 0;
-	done <= 0;
+	    done <= 0;
     end else if (en && !done) begin
         for (row_index = 0; row_index < ENDING_SIZE; row_index = row_index + 1) begin
             for (column_index = 0; column_index < ENDING_SIZE; column_index = column_index + 1) begin
@@ -77,11 +75,9 @@ always @(posedge clk or posedge rst) begin
         
             // assign the summations to the featuremap
             $display("[%0t] row_index: %d, column_index: %d, patch_sum: %d", $time, row_index, column_index, patch_sum);
-            feature_map[output_index -: ENDING_ELEMENT_SIZE] = patch_sum; // TODO: if scaling, replace patch_sum with scaled_sum
+            o_featuremap[output_index -: ENDING_ELEMENT_SIZE] = patch_sum; // TODO: if scaling, replace patch_sum with scaled_sum
             end // of a column
         end // of a row
-        
-        o_featuremap <= feature_map;
 	    done <= 1;
     end
 end
