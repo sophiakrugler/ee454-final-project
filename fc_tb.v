@@ -45,9 +45,9 @@ initial begin
     // Weights are arranged as a flattened version of weights[row_node][col_node][classification]. i.e. from starting node to ending node
     for (row = 0; row < STARTING_SIZE; row = row + 1) begin
         for(col = 0; col < STARTING_SIZE; col = col + 1) begin
-            example_input[row*STARTING_SIZE*ELEMENT_SIZE + col*ELEMENT_SIZE + ELEMENT_SIZE - 1 -: ELEMENT_SIZE] <= (10); // TODO: change this to a more complicated case later
+            example_input[row*STARTING_SIZE*ELEMENT_SIZE + col*ELEMENT_SIZE + ELEMENT_SIZE - 1 -: ELEMENT_SIZE] <= row*100 + col*25;
              for (class_index = 0; class_index < CLASSIFICATIONS; class_index = class_index + 1) begin
-                weights[(row*STARTING_SIZE*CLASSIFICATIONS + col*CLASSIFICATIONS + class_index + 1)*WEIGHT_DEPTH - 1 -: WEIGHT_DEPTH] <= class_index == 2 ? 10 : 0; // TODO: change this to a more complicated case later
+                weights[(row*STARTING_SIZE*CLASSIFICATIONS + col*CLASSIFICATIONS + class_index + 1)*WEIGHT_DEPTH - 1 -: WEIGHT_DEPTH] <= (row*150 + col*20 + class_index*5)%256;
             end
         end
     end
@@ -62,7 +62,7 @@ initial begin
 
     wait(done);
     for(i = 0; i < CLASSIFICATIONS; i = i + 1) begin
-        $display("output[%d]: %d",i, o_featuremap[i*CLASSIFICATIONS*ENDING_ELEMENT_SIZE+ENDING_ELEMENT_SIZE-1 -: ENDING_ELEMENT_SIZE] );
+        $display("output[%d]: %d",i, o_featuremap[i*ENDING_ELEMENT_SIZE+ENDING_ELEMENT_SIZE-1 -: ENDING_ELEMENT_SIZE] );
     end
     #400 $finish;
 end

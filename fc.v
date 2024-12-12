@@ -18,7 +18,7 @@ module fc#(
     output reg done
 );
 
-reg [5:0] row_index, column_index, weight_index;
+reg [4:0] row_index, column_index, weight_index;
 reg [WEIGHT_DEPTH-1:0] weight;
 reg [ELEMENT_SIZE-1 : 0] element;
 
@@ -37,7 +37,7 @@ always @(posedge clk or posedge rst) begin
                 end
             end // of a column
         end // of a row
-	    done <= 1;
+	done <= 1;
     end
 end
 
