@@ -31,7 +31,7 @@ always @(posedge clk or posedge rst) begin
             for (column_index = 0; column_index < STARTING_SIZE; column_index = column_index + 1) begin
                 element = i_featuremap[row_index*STARTING_SIZE*ELEMENT_SIZE + column_index*ELEMENT_SIZE + ELEMENT_SIZE - 1 -: ELEMENT_SIZE];
                 for (weight_index = 0; weight_index < CLASSIFICATIONS; weight_index = weight_index + 1) begin
-                    weight = weights[(row_index*STARTING_SIZE + column_index)*WEIGHT_DEPTH + weight_index*WEIGHT_DEPTH + WEIGHT_DEPTH - 1 -: WEIGHT_DEPTH];
+                    weight = weights[(row_index*STARTING_SIZE*CLASSIFICATIONS + column_index*CLASSIFICATIONS + weight_index + 1)*WEIGHT_DEPTH - 1 -: WEIGHT_DEPTH];
                     o_featuremap[weight_index*ENDING_ELEMENT_SIZE + ENDING_ELEMENT_SIZE - 1 -: ENDING_ELEMENT_SIZE] = o_featuremap[weight_index*ENDING_ELEMENT_SIZE + ENDING_ELEMENT_SIZE - 1 -: ENDING_ELEMENT_SIZE] + element * weight;
                     $display("weight index: %d, weight value: %d, element value: %d, new output value for classification %d: %d", weight_index, weight, element, weight_index, o_featuremap[weight_index*ENDING_ELEMENT_SIZE + ENDING_ELEMENT_SIZE - 1 -: ENDING_ELEMENT_SIZE]);
                 end

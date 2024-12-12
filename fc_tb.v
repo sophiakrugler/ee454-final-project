@@ -47,7 +47,7 @@ initial begin
         for(col = 0; col < STARTING_SIZE; col = col + 1) begin
             example_input[row*STARTING_SIZE*ELEMENT_SIZE + col*ELEMENT_SIZE + ELEMENT_SIZE - 1 -: ELEMENT_SIZE] <= (10); // TODO: change this to a more complicated case later
              for (class_index = 0; class_index < CLASSIFICATIONS; class_index = class_index + 1) begin
-                weights[(row*STARTING_SIZE + col)*WEIGHT_DEPTH + class_index*WEIGHT_DEPTH + WEIGHT_DEPTH - 1 -: WEIGHT_DEPTH] <= class_index == 2 ? 10 : 0; // TODO: change this to a more complicated case later
+                weights[(row*STARTING_SIZE*CLASSIFICATIONS + col*CLASSIFICATIONS + class_index + 1)*WEIGHT_DEPTH - 1 -: WEIGHT_DEPTH] <= class_index == 2 ? 10 : 0; // TODO: change this to a more complicated case later
             end
         end
     end
@@ -62,7 +62,7 @@ initial begin
 
     wait(done);
     for(i = 0; i < CLASSIFICATIONS; i = i + 1) begin
-        $display("output[%d]: %d",i, o_featuremap[i*CLASSIFICATIONS*ENDING_ELEMENT_SIZE+ENDING_ELEMENT_SIZE*(j + 1)-1-: ENDING_ELEMENT_SIZE] );
+        $display("output[%d]: %d",i, o_featuremap[i*CLASSIFICATIONS*ENDING_ELEMENT_SIZE+ENDING_ELEMENT_SIZE-1 -: ENDING_ELEMENT_SIZE] );
     end
     #400 $finish;
 end
