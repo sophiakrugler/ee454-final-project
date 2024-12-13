@@ -7,6 +7,7 @@
 #include "device_launch_parameters.h"
 
 #include <stdio.h>
+#include <chrono>
 
 // Define the convolution as a kernel which can be done in parallel
 #define STARTING_SIZE  28
@@ -75,6 +76,8 @@ int main()
     }
     printf("\n");
 
+    auto start_time = std::chrono::high_resolution_clock::now();
+
     // Apply convolutions in parallel
     cudaError_t cudaStatus = convWithCuda(i_featuremap, kernel, o_featuremap);
     if (cudaStatus != cudaSuccess)
@@ -82,6 +85,13 @@ int main()
         fprintf(stderr, "addWithCuda failed!");
         return 1;
     }
+
+    // Time performance
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = end_time - start_time;
+    auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+
+    printf("Elapsed time: %lld microseconds\n", microseconds);
 
     // Print the output map
     for (int i = 0; i < ENDING_SIZE; i++)
