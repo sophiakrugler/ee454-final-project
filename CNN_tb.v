@@ -19,7 +19,7 @@ wire done;
 wire [2:0] state;
 integer i;
 
-cnn uut(
+CNN uut(
     .clk(clk),
     .rst_(rst_),
     .led(led),

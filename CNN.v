@@ -1,7 +1,7 @@
 
 `timescale 1ns/100ps
 
-module cnn#(
+module CNN#(
     parameter IMAGE_SIZE = 28, // The starting height & width of the input image
     parameter PIXEL_DEPTH = 8, // The depth of each pixel of the input image
     parameter WINDOW_SIZE = 3, // this is the height & width of the window/kernel
@@ -24,6 +24,7 @@ reg conv_rst, pool_rst, fc_rst, relu_rst;
 reg conv_en, pool_en, fc_en, relu_en;
 wire conv_done, pool_done, fc_done, relu_done;
 reg [5:0] i, j, k; // for iterating
+reg [4:0] expected_class;
 
 
 reg [IMAGE_SIZE*IMAGE_SIZE*PIXEL_DEPTH-1:0] input_image; // TODO: consider adding another dimension for multiple images
@@ -82,9 +83,15 @@ relu relu_layer (
 
 // TODO: add transmitter and receiver logic
 
+// This will only work during simulation
+initial begin
+    $readmemh("second_image.hex", input_image);
+    $readmemh("second_label.hex", expected_class);
+end
+
 always @(posedge clk or negedge rst_) begin
     if (!rst_) begin
-	    $display("In CNN reset!");
+	    $display("In CNN reset! Expected class: %d", expected_class);
         led <= 10'b1111111111;  // Reset the led output when reset is low
         state <= 3'b000;
         conv_rst <= 1'b1;
@@ -102,11 +109,16 @@ always @(posedge clk or negedge rst_) begin
 
         // TODO: hard code an array of input images. for now just use garbage data
         // TODO: hard code a set of 40 weights for the fully connect layer (2x2x10). For now just use garbage values.
+        /* TODO: uncomment this when synthesizing
         for (i = 0; i < IMAGE_SIZE; i = i + 1) begin
             for (j = 0; j < IMAGE_SIZE; j = j + 1) begin
                 input_image[i*IMAGE_SIZE*PIXEL_DEPTH + j*PIXEL_DEPTH + PIXEL_DEPTH - 1 -: PIXEL_DEPTH] = (i + j*8)%256;
+            end
+        end */
+        for (i = 0; i < POOL_IMAGE_SIZE; i = i + 1) begin
+            for (j = 0; j < POOL_IMAGE_SIZE; j = j + 1) begin
                 for(k = 0; k < CLASSIFICATIONS; k = k + 1) begin
-                    fc_weights[(i*IMAGE_SIZE*CLASSIFICATIONS + j*CLASSIFICATIONS + k + 1)*FC_WEIGHT_DEPTH - 1 -: FC_WEIGHT_DEPTH] = (k == 2) ? 100 : 0;
+                    fc_weights[(i*POOL_IMAGE_SIZE*CLASSIFICATIONS + j*CLASSIFICATIONS + k + 1)*FC_WEIGHT_DEPTH - 1 -: FC_WEIGHT_DEPTH] = (k == 2) ? 100 : 0;
                 end
             end
         end
@@ -149,6 +161,7 @@ always @(posedge clk or negedge rst_) begin
             led <= relu_result; // Set the led output to the classification
         end
         else if(state == 3'b101) begin
+            $display("Finished CNN! Expected classification: 2^%d, Actual classification: %d", expected_class, led);
             done <= 1'b1; // Set done signal
             // state <= 3'b000; // Will hold output until reset is hit again
             // TODO: if implementing multiple images, wait in this state for a few seconds before moving onto the next image
