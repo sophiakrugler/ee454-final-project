@@ -3,7 +3,7 @@
 module relu_tb#(
     parameter CLASSIFICATIONS = 10,
     parameter ELEMENT_SIZE = 30,
-    parameter NORMALIZED_SIZE = 15 // 15 bits for normalized results
+    parameter NORMALIZED_SIZE = 25 // 25 bits for normalized results
 )();
 
 
@@ -34,11 +34,10 @@ integer fc_index, class_index, i ,j;
 reg[(CLASSIFICATIONS*ELEMENT_SIZE)-1:0] example_fc_results;
 
 initial begin
-
     example_fc_results <= 0;
     // Weights are arranged as a flattened version of weights[row_node][col_node][classification]. i.e. from starting node to ending node
     for (fc_index = 0; fc_index < CLASSIFICATIONS; fc_index = fc_index + 1) begin
-        example_fc_results[fc_index*ELEMENT_SIZE + ELEMENT_SIZE - 1 -: ELEMENT_SIZE] <= fc_index*100;
+        example_fc_results[fc_index*ELEMENT_SIZE + ELEMENT_SIZE - 1 -: ELEMENT_SIZE] <= 1000 - fc_index*100;
     end
 
     // test signals
@@ -50,9 +49,9 @@ initial begin
     #5 en = 1;
 
     wait(done);
-    $display("Classification: %d", class_hotcoded);
     for(i = 0; i < CLASSIFICATIONS; i = i + 1) begin
-        $display("input[%d}: %d normalized to output[%d]: %d",i, example_fc_results[i*ELEMENT_SIZE + ELEMENT_SIZE - 1 -: ELEMENT_SIZE], i, normalized_results[i*NORMALIZED_SIZE + NORMALIZED_SIZE - 1 -: NORMALIZED_SIZE] );
+	    $display("Classification %d? %d", i, class_hotcoded[i]);
+        $display("input[%d}: %d normalized to output[%d]: %d",i, example_fc_results[i*ELEMENT_SIZE + ELEMENT_SIZE - 1 -: ELEMENT_SIZE], i, normalized_results[i*NORMALIZED_SIZE + NORMALIZED_SIZE - 1 -: NORMALIZED_SIZE]);
     end
     #400 $finish;
 end

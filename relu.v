@@ -2,7 +2,7 @@
 module relu#(
     parameter CLASSIFICATIONS = 10,
     parameter ELEMENT_SIZE = 30,
-    parameter NORMALIZED_SIZE = 15 // 15 bits for normalized results
+    parameter NORMALIZED_SIZE = 25 // 25 bits for normalized results
 )(
     //input wires for a feature map
     input wire clk,
@@ -18,8 +18,10 @@ reg [4:0] index;
 reg [4:0] max_index;
 reg done_relu;
 reg [ELEMENT_SIZE-1:0] max_value;
-reg [ELEMENT_SIZE - NORMALIZED_SIZE - 1:0] normalized_cutoff = 15'b111111111111111;
+reg [ELEMENT_SIZE - NORMALIZED_SIZE - 1:0] normalized_cutoff = 5'b11111;
 wire [CLASSIFICATIONS-1:0] class_hotcoded_wire;
+reg [ELEMENT_SIZE -1:0] unnormal_element;
+reg [NORMALIZED_SIZE-1:0] normal_element;
 
 // Decode the max index
 assign class_hotcoded_wire[0] = (max_index == 0) ? 1 : 0;
@@ -39,6 +41,7 @@ always @(posedge clk or posedge rst) begin
         normalized_results <= 0;
 	    done <= 0;
         done_relu <= 0;
+	    max_value <= 0;
     end else if (en && !done_relu) begin
         for (index = 0; index < CLASSIFICATIONS; index = index + 1) begin
             // Find max
@@ -47,8 +50,10 @@ always @(posedge clk or posedge rst) begin
                 max_index = index;
             end
             // Normalize
-            if (fc_results[index*ELEMENT_SIZE + ELEMENT_SIZE - 1 -: ELEMENT_SIZE] > normalized_cutoff) begin
-                normalized_results[index*NORMALIZED_SIZE + NORMALIZED_SIZE - 1 -: NORMALIZED_SIZE] = fc_results[index*ELEMENT_SIZE + ELEMENT_SIZE - 1 -: ELEMENT_SIZE] >> (ELEMENT_SIZE - NORMALIZED_SIZE); // Right shift by 15 bits
+            unnormal_element = fc_results[index*ELEMENT_SIZE + ELEMENT_SIZE - 1 -: ELEMENT_SIZE];
+            if (unnormal_element > normalized_cutoff) begin
+                normal_element = unnormal_element >> (ELEMENT_SIZE-NORMALIZED_SIZE); // Right shift by 5 bits
+                normalized_results[index*NORMALIZED_SIZE + NORMALIZED_SIZE - 1 -: NORMALIZED_SIZE] = normal_element;
             end else begin
                 normalized_results[index*NORMALIZED_SIZE + NORMALIZED_SIZE - 1 -: NORMALIZED_SIZE] = 0;
             end
