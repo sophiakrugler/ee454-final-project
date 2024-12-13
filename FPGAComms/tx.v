@@ -22,7 +22,6 @@ begin
 		state <= 0;
 		counter <= 0;
 		bitCounter <= 0;
-		TxD <= 1;
 	end
 	else begin
 		counter <= counter+1;
@@ -50,7 +49,6 @@ begin
 	load <= 0;
 	shift <= 0;
 	clear <= 0;
-	TxD <= 1;
 	case (state)
 		// initial state, if transmit is set initializes for data transmission
 	0: begin

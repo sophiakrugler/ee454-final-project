@@ -53,11 +53,13 @@ always @(posedge slow_clock or posedge reset) begin
 			case (state)
 			RX_IDLE : begin
 				if (rx_sync == 0) begin
+					data <= 8'b0000_0000;
 					state <= RX_START;
 					sample_counter <= 0;
 				end
 			end
 			RX_START: begin
+				data <= 8'b0000_0001;
 				if (sample_counter == 11) begin // 1.5 of a transfer tick 35 (-1 because 0 inclusive)
 					state <= RX_DATA;
 					sample_counter <= 0;
@@ -65,6 +67,7 @@ always @(posedge slow_clock or posedge reset) begin
 					sample_counter <= sample_counter + 1;
 			end
 			RX_DATA : begin
+				data <= 8'b0000_0010;
 				if (sample_counter == 11) begin
 					sample_counter <= 0;
 					temp_data[bitCounter] <= rx_sync;
@@ -75,10 +78,10 @@ always @(posedge slow_clock or posedge reset) begin
 				end else sample_counter <= sample_counter + 1;
 			end
 			RX_END : begin
+					data <= temp_data;
 					ready <= 1'b1;
 					state <= RX_IDLE;
 					sample_counter <= 0;
-					data <= temp_data;
 			end
 			default: state <= RX_IDLE;
 			endcase
