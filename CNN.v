@@ -1,6 +1,7 @@
+
 `timescale 1ns/100ps
 
-module CCN #(
+module cnn#(
     parameter IMAGE_SIZE = 28, // The starting height & width of the input image
     parameter PIXEL_DEPTH = 8, // The depth of each pixel of the input image
     parameter WINDOW_SIZE = 3, // this is the height & width of the window/kernel
@@ -15,10 +16,10 @@ module CCN #(
     input wire clk,
     input wire rst_,  // Active-low reset
     output reg [CLASSIFICATIONS-1:0] led, //for one hot encoding of 10 classes
-    output reg done
+    output reg done,
+    output reg [2:0] state // States: 0 = idle, 1 = conv, 2 = pool, 3 = fc, 4 = relu, 5 = done
 );
 
-reg [2:0] state; // States: 0 = idle, 1 = conv, 2 = pool, 3 = fc, 4 = relu, 5 = done
 reg conv_rst, pool_rst, fc_rst, relu_rst;
 reg conv_en, pool_en, fc_en, relu_en;
 wire conv_done, pool_done, fc_done, relu_done;
@@ -28,10 +29,13 @@ reg [5:0] i, j, k; // for iterating
 reg [IMAGE_SIZE*IMAGE_SIZE*PIXEL_DEPTH-1:0] input_image; // TODO: consider adding another dimension for multiple images
 reg [WINDOW_SIZE*WINDOW_SIZE*PIXEL_DEPTH-1:0] kernel;
 reg [CONV_IMAGE_SIZE*CONV_IMAGE_SIZE*CONV_PIXEL_DEPTH-1:0] conv_image;
+wire [CONV_IMAGE_SIZE*CONV_IMAGE_SIZE*CONV_PIXEL_DEPTH-1:0] conv_image_wire;
 reg [POOL_IMAGE_SIZE*POOL_IMAGE_SIZE*CONV_PIXEL_DEPTH-1:0] pool_image;
+wire [POOL_IMAGE_SIZE*POOL_IMAGE_SIZE*CONV_PIXEL_DEPTH-1:0] pool_image_wire;
 reg [POOL_IMAGE_SIZE*POOL_IMAGE_SIZE*CLASSIFICATIONS*FC_WEIGHT_DEPTH-1:0] fc_weights;
 reg [CLASSIFICATIONS*FC_RESULT_DEPTH-1:0] fc_result;
-reg [CLASSIFICATIONS-1:0] relu_result;
+wire [CLASSIFICATIONS*FC_RESULT_DEPTH-1:0] fc_result_wire;
+wire [CLASSIFICATIONS-1:0] relu_result;
 
 
 // Instantiate convolutional layer
@@ -40,8 +44,8 @@ convolution28 conv_layer (
     .rst(conv_rst),
     .en(conv_en),
     .i_featuremap(input_image),
-    .kernal(kernel),
-    .o_featuremap(conv_image),
+    .kernel(kernel),
+    .o_featuremap(conv_image_wire),
     .done(conv_done)
 );
 
@@ -51,7 +55,7 @@ maxpool pool_layer (
     .rst(pool_rst),
     .en(pool_en),
     .i_featuremap(conv_image),
-    .o_featuremap(pool_image),
+    .o_featuremap(pool_image_wire),
     .done(pool_done)
 );
 
@@ -62,7 +66,7 @@ fc fc_layer (
     .en(fc_en),
     .i_featuremap(pool_image),
     .weights(fc_weights),
-    .o_featuremap(fc_result),
+    .o_featuremap(fc_result_wire),
     .done(fc_done)
 );
 
@@ -80,6 +84,7 @@ relu relu_layer (
 
 always @(posedge clk or negedge rst_) begin
     if (!rst_) begin
+	    $display("In CNN reset!");
         led <= 10'b1111111111;  // Reset the led output when reset is low
         state <= 3'b000;
         conv_rst <= 1'b1;
@@ -99,38 +104,46 @@ always @(posedge clk or negedge rst_) begin
         // TODO: hard code a set of 40 weights for the fully connect layer (2x2x10). For now just use garbage values.
         for (i = 0; i < IMAGE_SIZE; i = i + 1) begin
             for (j = 0; j < IMAGE_SIZE; j = j + 1) begin
-                kernel[i*IMAGE_SIZE*PIXEL_DEPTH + j*PIXEL_DEPTH + PIXEL_DEPTH - 1 -: PIXEL_DEPTH] = 8b'10101010;
+                input_image[i*IMAGE_SIZE*PIXEL_DEPTH + j*PIXEL_DEPTH + PIXEL_DEPTH - 1 -: PIXEL_DEPTH] = (i + j*8)%256;
                 for(k = 0; k < CLASSIFICATIONS; k = k + 1) begin
-                    fc_weights[(i*IMAGE_SIZE*CLASSIFICATIONS + j*CLASSIFICATIONS + k + 1)*FC_WEIGHT_DEPTH - 1 -: FC_WEIGHT_DEPTH] = (i*10 + j*25 + k*5)%256;
+                    fc_weights[(i*IMAGE_SIZE*CLASSIFICATIONS + j*CLASSIFICATIONS + k + 1)*FC_WEIGHT_DEPTH - 1 -: FC_WEIGHT_DEPTH] = (k == 2) ? 100 : 0;
                 end
             end
         end
     end
     else begin
         if(state == 3'b000) begin
+	        $display("Entering convolution layer");
             state <= 3'b001; // Move to next state
             conv_rst <= 1'b0; // Lower conv reset
             conv_en <= 1'b1; // Enable conv
         end
         else if(state == 3'b001 && conv_done) begin
+	        $display("Finished convolution layer!");
             state <= 3'b010;
             conv_en <= 1'b0; // Disable conv layer
             pool_rst <= 1'b0; // Lower pool reset
             pool_en <= 1'b1; // Enable pool
+	    conv_image <= conv_image_wire;
         end
         else if(state == 3'b010 && pool_done) begin
+	        $display("Finished max pool!");
             state <= 3'b011;
             pool_en <= 1'b0; // Disable pool layer
             fc_rst <= 1'b0; // Lower fc reset
             fc_en <= 1'b1; // Enable fc layer
+	    pool_image <= pool_image_wire;
         end
         else if(state == 3'b011 && fc_done) begin
+	        $display("Finished fully connect!");
             state <= 3'b100;
             fc_en <= 1'b0; // Disable fc layer
             relu_rst <= 1'b0; // Lower relu reset
             relu_en <= 1'b1; // Enable relu layer
+	    fc_result <= fc_result_wire;
         end
         else if(state == 3'b100 && relu_done) begin
+	        $display("Finished relu!");
             state <= 3'b101;
             relu_en <= 1'b0; // Disable relu layer
             led <= relu_result; // Set the led output to the classification
@@ -144,3 +157,4 @@ always @(posedge clk or negedge rst_) begin
 end
 
 endmodule
+
