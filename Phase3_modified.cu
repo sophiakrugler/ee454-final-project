@@ -1,4 +1,4 @@
-﻿
+
 // This is Phase 3 of the EE454 Final Project
 
 // The goal is to build a convolutional layer and compare it's results
@@ -22,18 +22,29 @@ __global__ void Convolution(int* i_featuremap, int* o_featuremap, int* kernel)
 {
     // This will take in a featuremap, apply a filter (kernel), and output an element of the resulting featuremap
     // The input featuremap is STARTING_SIZE x STARTING SIZE, or 28x28, the output is (STARTING_SIZE - WINDOW_SIZE + 1) x (STARTING_SIZE - WINDOW_SIZE + 1), or 26x26
+    // The convolution for element (i, j) of the output feature map is:
+    // o_featuremap[i][j] = sum(i_featuremap[i:i+WINDOW_SIZE][j:j+WINDOW_SIZE] * kernel)
 
     // Extract the 3x3 window from i_featuremap
-    int i = threadIdx.x; // which element we are currently computing
+    int output_element = threadIdx.x; // which element we are currently computing
+    // element i corresponds to the window: from i_row  to i_row + WINDOW_SIZE - 1 by i_column to i_column + WINDOW_SIZE - 1
     int sum = 0;
-    int input_row = i / STARTING_SIZE;
-    int input_column = i % STARTING_SIZE;
+    int out_row = output_element / ENDING_SIZE; // row and column of this element in the output featuremap
+    int out_column = output_element % ENDING_SIZE;
+    // int input_row = i / STARTING_SIZE;
+    // int input_column = i % STARTING_SIZE;
 
-    for (int j = 0; j < WINDOW_SIZE * WINDOW_SIZE; j++)
+    for (int i = 0; i < WINDOW_SIZE; i++)
     {
+        for (int j = 0; j < WINDOW_SIZE; j++)
+        {
+            // Multiply Window Element-wise by the Kernel and Sum the result
+            //o_featuremap[i] = o_featuremap[i] + i_featuremap[(i*STARTING_SIZE)+j] * kernel[j];
+            sum = sum + i_featuremap[(out_row + i) * STARTING_SIZE + (out_column + j)] * kernel[i * WINDOW_SIZE + j];
+        }
         // Multiply Window Element-wise by the Kernel and Sum the result
         //o_featuremap[i] = o_featuremap[i] + i_featuremap[(i*STARTING_SIZE)+j] * kernel[j];
-        sum = sum + i_featuremap[(i * STARTING_SIZE) + ((j / WINDOW_SIZE) * (STARTING_SIZE)) + (j % WINDOW_SIZE)] * kernel[j];
+        // sum = sum + i_featuremap[(i * STARTING_SIZE) + ((j / WINDOW_SIZE) * (STARTING_SIZE)) + (j % WINDOW_SIZE)] * kernel[j];
     }
     o_featuremap[i] = sum;
 }
