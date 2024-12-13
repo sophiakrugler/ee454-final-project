@@ -9,8 +9,8 @@
 #include <stdio.h>
 
 // Define the convolution as a kernel which can be done in parallel
-#define STARTING_SIZE  5
-#define ENDING_SIZE    3
+#define STARTING_SIZE  28
+#define ENDING_SIZE    26
 #define WINDOW_SIZE    3
 
 cudaError_t convWithCuda(int* i_map, int* kernel, int* o_map);
@@ -24,18 +24,22 @@ __global__ void Convolution(int* i_featuremap, int* o_featuremap, int* kernel)
     // The input featuremap is STARTING_SIZE x STARTING SIZE, or 28x28, the output is (STARTING_SIZE - WINDOW_SIZE + 1) x (STARTING_SIZE - WINDOW_SIZE + 1), or 26x26
 
     // Extract the 3x3 window from i_featuremap
-    int i = threadIdx.x; // which element we are currently computing
+    int output_element = threadIdx.x; // which element we are currently computing
+    // element i corresponds to the window: from i_row  to i_row + WINDOW_SIZE - 1 by i_column to i_column + WINDOW_SIZE - 1
     int sum = 0;
-    int input_row = i / STARTING_SIZE;
-    int input_column = i % STARTING_SIZE;
+    int out_row = output_element / ENDING_SIZE; // row and column of this element in the output featuremap
+    int out_column = output_element % ENDING_SIZE;
 
-    for (int j = 0; j < WINDOW_SIZE * WINDOW_SIZE; j++)
+
+    for (int i = 0; i < WINDOW_SIZE; i++)
     {
-        // Multiply Window Element-wise by the Kernel and Sum the result
-        //o_featuremap[i] = o_featuremap[i] + i_featuremap[(i*STARTING_SIZE)+j] * kernel[j];
-        sum = sum + i_featuremap[(i * STARTING_SIZE) + ((j / WINDOW_SIZE) * (STARTING_SIZE)) + (j % WINDOW_SIZE)] * kernel[j];
+        for (int j = 0; j < WINDOW_SIZE; j++)
+        {
+            // Multiply Window Element-wise by the Kernel and Sum the result
+            sum = sum + i_featuremap[(out_row + i) * STARTING_SIZE + (out_column + j)] * kernel[i * WINDOW_SIZE + j];
+        }
     }
-    o_featuremap[i] = sum;
+    o_featuremap[output_element] = sum;
 }
 
 int main()
@@ -182,7 +186,7 @@ cudaError_t convWithCuda(int* i_map, int* kernel, int* o_map)
     }
 
     // Launch a kernel on the GPU with one thread for each element
-    Convolution << <1, ENDING_SIZE* ENDING_SIZE >> > (dev_input, dev_output, dev_kernel);
+    Convolution << <1, ENDING_SIZE*ENDING_SIZE >> > (dev_input, dev_output, dev_kernel);
 
     // Check for any errors when launching the kernel
     cudaStatus = cudaGetLastError();
