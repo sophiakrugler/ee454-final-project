@@ -99,6 +99,7 @@ always @(posedge clk or posedge rst) begin
         pool_rst <= 1'b1;
         fc_rst <= 1'b1;
         relu_rst <= 1'b1;
+        done <= 1'b0;
 
         // TODO: hard code a kernel. For now just use garbage values:
         for (i = 0; i < WINDOW_SIZE; i = i + 1) begin
@@ -137,7 +138,7 @@ always @(posedge clk or posedge rst) begin
             conv_en <= 1'b0; // Disable conv layer
             pool_rst <= 1'b0; // Lower pool reset
             pool_en <= 1'b1; // Enable pool
-	    conv_image <= conv_image_wire;
+	        conv_image <= conv_image_wire;
         end
         else if(state == 3'b010 && pool_done) begin
 	        $display("Finished max pool!");
