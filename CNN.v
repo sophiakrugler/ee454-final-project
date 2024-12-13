@@ -17,7 +17,7 @@ module CNN#(
     input wire rst,  // Active-low reset
     output reg [CLASSIFICATIONS-1:0] led, //for one hot encoding of 10 classes
     output reg done,
-    output reg [2:0] state, // States: 0 = idle, 1 = conv, 2 = pool, 3 = fc, 4 = relu, 5 = done
+    output reg [2:0] state // States: 0 = idle, 1 = conv, 2 = pool, 3 = fc, 4 = relu, 5 = done
 );
 
 reg conv_rst, pool_rst, fc_rst, relu_rst;
@@ -93,7 +93,7 @@ end
 always @(posedge clk or posedge rst) begin
     if (rst) begin
 	    $display("In CNN reset! Expected class: %d", expected_class);
-        led <= 10'b1111111111;  // Reset the led output when reset is low
+        led <= 10'b0000000000;  // Reset the led output when reset is low
         state <= 3'b000;
         conv_rst <= 1'b1;
         pool_rst <= 1'b1;
