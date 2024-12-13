@@ -1,3 +1,4 @@
+
 // Fully connect layer
 module relu#(
     parameter CLASSIFICATIONS = 10,
@@ -68,4 +69,3 @@ always @(posedge clk or posedge rst) begin
 end
 
 endmodule
-

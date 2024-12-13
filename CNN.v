@@ -1,7 +1,8 @@
 
+
 `timescale 1ns/100ps
 
-module CNN#(
+module CNN_transmit#(
     parameter IMAGE_SIZE = 28, // The starting height & width of the input image
     parameter PIXEL_DEPTH = 8, // The depth of each pixel of the input image
     parameter WINDOW_SIZE = 3, // this is the height & width of the window/kernel
@@ -17,14 +18,14 @@ module CNN#(
     input wire rst,  // Active-low reset
     output reg [CLASSIFICATIONS-1:0] led, //for one hot encoding of 10 classes
     output reg done,
-    output reg [2:0] state // States: 0 = idle, 1 = conv, 2 = pool, 3 = fc, 4 = relu, 5 = done
+    output reg [2:0] state  // States: 0 = idle, 1 = conv, 2 = pool, 3 = fc, 4 = relu, 5 = done
 );
 
 reg conv_rst, pool_rst, fc_rst, relu_rst;
 reg conv_en, pool_en, fc_en, relu_en;
 wire conv_done, pool_done, fc_done, relu_done;
 reg [5:0] i, j, k; // for iterating
-reg [4:0] expected_class;
+reg [7:0] expected_class;
 
 
 reg [IMAGE_SIZE*IMAGE_SIZE*PIXEL_DEPTH-1:0] input_image; // TODO: consider adding another dimension for multiple images
@@ -37,6 +38,11 @@ reg [POOL_IMAGE_SIZE*POOL_IMAGE_SIZE*CLASSIFICATIONS*FC_WEIGHT_DEPTH-1:0] fc_wei
 reg [CLASSIFICATIONS*FC_RESULT_DEPTH-1:0] fc_result;
 wire [CLASSIFICATIONS*FC_RESULT_DEPTH-1:0] fc_result_wire;
 wire [CLASSIFICATIONS-1:0] relu_result;
+wire[4:0] actual_class_wire;
+
+reg [PIXEL_DEPTH-1:0] input_image_mem [IMAGE_SIZE*IMAGE_SIZE-1:0];
+reg [7:0] expected_class_mem [1:0];
+
 
 
 // Instantiate convolutional layer
@@ -78,28 +84,40 @@ relu relu_layer (
     .en(relu_en),
     .fc_results(fc_result),
     .class_hotcoded(relu_result),
-    .class_encoded(actual_class),
+    .class_encoded(actual_class_wire),
+    .normalized_results(),
     .done(relu_done)
 );
 
-// TODO: add transmitter and receiver logic
-
 // This will only work during simulation
 initial begin
-    $readmemh("second_image.hex", input_image);
-    $readmemh("second_label.hex", expected_class);
+    $display("initial begin");
+    $readmemh("image.hex", input_image_mem);
+    $readmemh("label.hex", expected_class_mem);
+    $display("read image and label.");
+    // FLatten the arrays
+    expected_class = expected_class_mem[0];
+    for(i = 0; i < IMAGE_SIZE; i = i+1) begin
+ 	for(j = 0; j < IMAGE_SIZE; j = j+1) begin
+	    input_image[(i*IMAGE_SIZE + j + 1)*PIXEL_DEPTH - 1 -: PIXEL_DEPTH] = input_image_mem[i*IMAGE_SIZE + j];
+    	end
+    end
 end
 
 always @(posedge clk or posedge rst) begin
     if (rst) begin
-	    $display("In CNN reset! Expected class: %d", expected_class);
-        led <= 10'b0000000000;  // Reset the led output when reset is low
+	$display("In CNN reset! Expected class: %d", expected_class);
+        led <= 10'b1111111111;  // Reset the led output when reset is low
         state <= 3'b000;
         conv_rst <= 1'b1;
         pool_rst <= 1'b1;
         fc_rst <= 1'b1;
         relu_rst <= 1'b1;
         done <= 1'b0;
+        conv_en <= 1'b0;
+        pool_en <= 1'b0;
+        fc_en <= 1'b0;
+        relu_en <= 1'b0;
 
         // TODO: hard code a kernel. For now just use garbage values:
         for (i = 0; i < WINDOW_SIZE; i = i + 1) begin
@@ -117,6 +135,7 @@ always @(posedge clk or posedge rst) begin
                 input_image[i*IMAGE_SIZE*PIXEL_DEPTH + j*PIXEL_DEPTH + PIXEL_DEPTH - 1 -: PIXEL_DEPTH] = (i + j*8)%256;
             end
         end */
+
         for (i = 0; i < POOL_IMAGE_SIZE; i = i + 1) begin
             for (j = 0; j < POOL_IMAGE_SIZE; j = j + 1) begin
                 for(k = 0; k < CLASSIFICATIONS; k = k + 1) begin
@@ -127,13 +146,13 @@ always @(posedge clk or posedge rst) begin
     end
     else begin
         if(state == 3'b000) begin
-	        $display("Entering convolution layer");
+	    $display("Entering convolution layer");
             state <= 3'b001; // Move to next state
             conv_rst <= 1'b0; // Lower conv reset
             conv_en <= 1'b1; // Enable conv
         end
         else if(state == 3'b001 && conv_done) begin
-	        $display("Finished convolution layer!");
+	    $display("Finished convolution layer!");
             state <= 3'b010;
             conv_en <= 1'b0; // Disable conv layer
             pool_rst <= 1'b0; // Lower pool reset
@@ -141,35 +160,34 @@ always @(posedge clk or posedge rst) begin
 	        conv_image <= conv_image_wire;
         end
         else if(state == 3'b010 && pool_done) begin
-	        $display("Finished max pool!");
+	    $display("Finished max pool!");
             state <= 3'b011;
             pool_en <= 1'b0; // Disable pool layer
             fc_rst <= 1'b0; // Lower fc reset
             fc_en <= 1'b1; // Enable fc layer
-	    pool_image <= pool_image_wire;
+	        pool_image <= pool_image_wire;
         end
         else if(state == 3'b011 && fc_done) begin
-	        $display("Finished fully connect!");
+	    $display("Finished fully connect!");
             state <= 3'b100;
             fc_en <= 1'b0; // Disable fc layer
             relu_rst <= 1'b0; // Lower relu reset
             relu_en <= 1'b1; // Enable relu layer
-	    fc_result <= fc_result_wire;
+	        fc_result <= fc_result_wire;
         end
         else if(state == 3'b100 && relu_done) begin
 	        $display("Finished relu!");
             state <= 3'b101;
             relu_en <= 1'b0; // Disable relu layer
             led <= relu_result; // Set the led output to the classification
+	        $display("Finished CNN! Expected classification: %d, Actual classification: %d", expected_class, actual_class_wire);
         end
         else if(state == 3'b101) begin
-            $display("Finished CNN! Expected classification: %d, Actual classification: %d", expected_class, actual_class);
             done <= 1'b1; // Set done signal
-
+      
             // TODO: if implementing multiple images, wait in this state for a few seconds before moving onto the next image
         end
     end
 end
 
 endmodule
-
