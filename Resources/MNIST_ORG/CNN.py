@@ -212,7 +212,6 @@ class CNN(object):
         output = self.forward(x)
         return np.argmax(softmax(output), axis=1)
 
-""" bruh. no way they're using python learning models and expect us to use this as a reference for verilog code"""
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
@@ -248,3 +247,7 @@ y_test_labels = np.argmax(y_test, axis=1)
 # Calculate accuracy
 accuracy = accuracy_score(y_test_labels, y_pred)
 print(f"Test Accuracy: {accuracy * 100:.2f}%")
+# Print the first kernel:
+print(model.layers[0].kernel[:, :, :, 0])
+# Print the first fully connect layer weights:
+print(model.layers[2].w[:, 0])
