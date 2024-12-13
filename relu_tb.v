@@ -10,6 +10,7 @@ module relu_tb#(
 reg   clk, rst, en;
 reg  [(CLASSIFICATIONS*ELEMENT_SIZE)-1:0] fc_results;
 wire [CLASSIFICATIONS-1:0] class_hotcoded;
+wire [4:0] class_encoded;
 wire [(CLASSIFICATIONS*NORMALIZED_SIZE)-1:0] normalized_results;
 wire done;
 
@@ -19,6 +20,7 @@ relu uut(
     .en(en),
     .fc_results(fc_results),
     .class_hotcoded(class_hotcoded),
+    .class_encoded(class_encoded),
     .normalized_results(normalized_results),
     .done(done)
 );
@@ -49,6 +51,7 @@ initial begin
     #5 en = 1;
 
     wait(done);
+    $display("classification: %d", class_encoded);
     for(i = 0; i < CLASSIFICATIONS; i = i + 1) begin
 	    $display("Classification %d? %d", i, class_hotcoded[i]);
         $display("input[%d}: %d normalized to output[%d]: %d",i, example_fc_results[i*ELEMENT_SIZE + ELEMENT_SIZE - 1 -: ELEMENT_SIZE], i, normalized_results[i*NORMALIZED_SIZE + NORMALIZED_SIZE - 1 -: NORMALIZED_SIZE]);

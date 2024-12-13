@@ -10,6 +10,7 @@ module relu#(
     input wire en,
     input wire [(CLASSIFICATIONS*ELEMENT_SIZE)-1:0] fc_results,
     output reg [CLASSIFICATIONS-1:0] class_hotcoded,
+    output reg [4:0] class_encoded,
     output reg [(CLASSIFICATIONS*NORMALIZED_SIZE)-1:0] normalized_results, // For error calculation and back propagation
     output reg done
 );
@@ -61,6 +62,7 @@ always @(posedge clk or posedge rst) begin
 	    done_relu <= 1;
     end else if (en && done_relu) begin
         class_hotcoded <= class_hotcoded_wire;
+        class_encoded <= max_index;
         done <= 1;
     end
 end
