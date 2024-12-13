@@ -9,46 +9,67 @@
 #include <stdio.h>
 
 // Define the convolution as a kernel which can be done in parallel
-#define STARTING_SIZE 28
-#define ENDING_SIZE   26
+#define STARTING_SIZE  5
+#define ENDING_SIZE    3
 #define WINDOW_SIZE    3
 
-cudaError_t convWithCuda( int *i_map, int *kernel, int *o_map);
+cudaError_t convWithCuda(int* i_map, int* kernel, int* o_map);
 void create_input_featuremap(int* featuremap);
-void create_kernel(int *kernel);
+void create_kernel(int* kernel);
 
 //__global__ void Convolution(int i_featuremap[STARTING_SIZE][STARTING_SIZE], int o_featuremap[STARTING_SIZE - WINDOW_SIZE + 1][STARTING_SIZE - WINDOW_SIZE + 1], int kernel[WINDOW_SIZE][WINDOW_SIZE])
-__global__ void Convolution(int *i_featuremap, int *o_featuremap, int *kernel)
+__global__ void Convolution(int* i_featuremap, int* o_featuremap, int* kernel)
 {
     // This will take in a featuremap, apply a filter (kernel), and output an element of the resulting featuremap
     // The input featuremap is STARTING_SIZE x STARTING SIZE, or 28x28, the output is (STARTING_SIZE - WINDOW_SIZE + 1) x (STARTING_SIZE - WINDOW_SIZE + 1), or 26x26
 
     // Extract the 3x3 window from i_featuremap
     int i = threadIdx.x; // which element we are currently computing
+    int sum = 0;
+    int input_row = i / STARTING_SIZE;
+    int input_column = i % STARTING_SIZE;
 
-    for (int j = 0; j < WINDOW_SIZE; j++)
+    for (int j = 0; j < WINDOW_SIZE * WINDOW_SIZE; j++)
     {
         // Multiply Window Element-wise by the Kernel and Sum the result
-        o_featuremap[i] = o_featuremap[i] + i_featuremap[(i*STARTING_SIZE)+j] * kernel[j];
-        o_featuremap[i] = o_featuremap[i] + i_featuremap[((i+1) * STARTING_SIZE) + j] * kernel[j+WINDOW_SIZE];
-        o_featuremap[i] = o_featuremap[i] + i_featuremap[((i+2) * STARTING_SIZE) + j] * kernel[j+2*WINDOW_SIZE];
+        //o_featuremap[i] = o_featuremap[i] + i_featuremap[(i*STARTING_SIZE)+j] * kernel[j];
+        sum = sum + i_featuremap[(i * STARTING_SIZE) + ((j / WINDOW_SIZE) * (STARTING_SIZE)) + (j % WINDOW_SIZE)] * kernel[j];
     }
+    o_featuremap[i] = sum;
 }
 
 int main()
 {
     // Make i_featuremap
-    int i_featuremap[STARTING_SIZE*STARTING_SIZE] = { 0 }; // TODO: Need to initialize this to something
+    int i_featuremap[STARTING_SIZE * STARTING_SIZE] = { 0 }; // TODO: Need to initialize this to something
     create_input_featuremap(i_featuremap);
+    // Print the input map
+    for (int i = 0; i < STARTING_SIZE; i++)
+    {
+        for (int j = 0; j < STARTING_SIZE; j++)
+        {
+            printf("{%d}", i_featuremap[(i * STARTING_SIZE) + j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
 
     // Initialize o_featuremap
-    int o_featuremap[(STARTING_SIZE - WINDOW_SIZE + 1)*(STARTING_SIZE - WINDOW_SIZE + 1)] = {0}; // TODO: Need to initialize this to something
+    int o_featuremap[(STARTING_SIZE - WINDOW_SIZE + 1) * (STARTING_SIZE - WINDOW_SIZE + 1)] = { 0 }; // TODO: Need to initialize this to something
 
     // Make kernel
-    int kernel[WINDOW_SIZE*WINDOW_SIZE] = { 0 }; // Need to initialize this to something
+    int kernel[WINDOW_SIZE * WINDOW_SIZE] = { 0 }; // Need to initialize this to something
     create_kernel(kernel);
-
-    //int total_threads = (STARTING_SIZE - WINDOW_SIZE + 1) * (STARTING_SIZE - WINDOW_SIZE + 1);
+    // Print the kernel
+    for (int i = 0; i < WINDOW_SIZE; i++)
+    {
+        for (int j = 0; j < WINDOW_SIZE; j++)
+        {
+            printf("{%d}", kernel[(i * WINDOW_SIZE) + j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
 
     // Apply convolutions in parallel
     cudaError_t cudaStatus = convWithCuda(i_featuremap, kernel, o_featuremap);
@@ -58,34 +79,12 @@ int main()
         return 1;
     }
 
-    // Print the input map
-    for (int i = 0; i < STARTING_SIZE; i++)
-    {
-        for (int j = 0; j < STARTING_SIZE; j++)
-        {
-            printf("{%d}", i_featuremap[(i*STARTING_SIZE)+j]);
-        }
-        printf("\n");
-    }
-    printf("\n");
-
-    // Print the kernel
-    for (int i = 0; i < WINDOW_SIZE; i++)
-    {
-        for (int j = 0; j < WINDOW_SIZE; j++)
-        {
-            printf("{%d}", kernel[(i*WINDOW_SIZE)+j]);
-        }
-        printf("\n");
-    }
-    printf("\n");
-
     // Print the output map
     for (int i = 0; i < ENDING_SIZE; i++)
     {
         for (int j = 0; j < ENDING_SIZE; j++)
         {
-            printf("{%d}", o_featuremap[(i*ENDING_SIZE)+j]);
+            printf("{%d}", o_featuremap[(i * ENDING_SIZE) + j]);
         }
         printf("\n");
     }
@@ -101,13 +100,13 @@ int main()
     return 0;
 }
 
-void create_input_featuremap(int *featuremap)
+void create_input_featuremap(int* featuremap)
 {
     for (int i = 0; i < STARTING_SIZE; i++)
     {
         for (int j = 0; j < STARTING_SIZE; j++)
         {
-            featuremap[(i * STARTING_SIZE) + j] = j%(STARTING_SIZE/2); // Creates vertical lines
+            featuremap[(i * STARTING_SIZE) + j] = j % (STARTING_SIZE / 2); // Creates vertical lines
         }
     }
 }
@@ -120,7 +119,7 @@ void create_kernel(int* kernel)
         {
             if (i != j)
             {
-                kernel[(i * WINDOW_SIZE) + j] = 1;
+                kernel[(i * WINDOW_SIZE) + j] = 2;
             }
             else
             {
@@ -130,13 +129,13 @@ void create_kernel(int* kernel)
     }
 }
 
-cudaError_t convWithCuda( int *i_map, int *kernel, int *o_map)
+cudaError_t convWithCuda(int* i_map, int* kernel, int* o_map)
 {
-    int *dev_input  = 0 ;
-    int *dev_output = 0 ;
-    int *dev_kernel = 0 ;
+    int* dev_input = 0;
+    int* dev_output = 0;
+    int* dev_kernel = 0;
     cudaError_t cudaStatus;
-    
+
     // Choose which GPU to run on
     cudaStatus = cudaSetDevice(0);
     if (cudaStatus != cudaSuccess)
@@ -183,7 +182,7 @@ cudaError_t convWithCuda( int *i_map, int *kernel, int *o_map)
     }
 
     // Launch a kernel on the GPU with one thread for each element
-    Convolution << <1, ENDING_SIZE*ENDING_SIZE >> > (dev_input, dev_output, dev_kernel);
+    Convolution << <1, ENDING_SIZE* ENDING_SIZE >> > (dev_input, dev_output, dev_kernel);
 
     // Check for any errors when launching the kernel
     cudaStatus = cudaGetLastError();
