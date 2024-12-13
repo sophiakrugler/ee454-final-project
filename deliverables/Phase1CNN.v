@@ -12,7 +12,6 @@ module CNN#(
     parameter FC_WEIGHT_DEPTH = 8, // The depth of each weight in fully connect
     parameter CLASSIFICATIONS = 10, // Number of classifications
     parameter FC_RESULT_DEPTH = 30 // Depth of the output of fully connect layer
-    // TODO: add kernel depth parameter
 ) (
     input wire clk,
     input wire rst,  // Active-low reset
@@ -119,7 +118,6 @@ always @(posedge clk or posedge rst) begin
         fc_en <= 1'b0;
         relu_en <= 1'b0;
 
-        // TODO: hard code a kernel. For now just use garbage values:
         for (i = 0; i < WINDOW_SIZE; i = i + 1) begin
             for (j = 0; j < WINDOW_SIZE; j = j + 1) begin
                 // TODO: replace with kernel depth parameter?
@@ -127,8 +125,7 @@ always @(posedge clk or posedge rst) begin
             end
         end
 
-        // TODO: hard code an array of input images. for now just use garbage data
-        // TODO: hard code a set of 40 weights for the fully connect layer (2x2x10). For now just use garbage values.
+        // TODO: hard code a set of 40 weights for the fully connect layer (2x2x10).
         /* TODO: uncomment this when synthesizing
         for (i = 0; i < IMAGE_SIZE; i = i + 1) begin
             for (j = 0; j < IMAGE_SIZE; j = j + 1) begin
@@ -184,8 +181,6 @@ always @(posedge clk or posedge rst) begin
         end
         else if(state == 3'b101) begin
             done <= 1'b1; // Set done signal
-      
-            // TODO: if implementing multiple images, wait in this state for a few seconds before moving onto the next image
         end
     end
 end
