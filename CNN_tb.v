@@ -13,7 +13,7 @@ module CNN_tb#(
 )();
 
 
-reg   clk, rst_; // CNN variables
+reg   clk, rst; // CNN variables
 wire [CLASSIFICATIONS-1:0] led;
 wire done;
 wire [2:0] state;
@@ -21,7 +21,7 @@ integer i;
 
 CNN uut(
     .clk(clk),
-    .rst_(rst_),
+    .rst(rst),
     .led(led),
     .done(done),
     .state(state)
@@ -35,9 +35,9 @@ end
 
 initial begin
     // test signals
-    #5 rst_ = 1;
     #5 rst_ = 0;
     #5 rst_ = 1;
+    #5 rst_ = 0;
 
     wait(done);
     for(i = 0; i < CLASSIFICATIONS; i = i + 1) begin

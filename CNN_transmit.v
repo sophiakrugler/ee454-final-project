@@ -1,7 +1,7 @@
 
 `timescale 1ns/100ps
 
-module CNN#(
+module CNN_transmit#(
     parameter IMAGE_SIZE = 28, // The starting height & width of the input image
     parameter PIXEL_DEPTH = 8, // The depth of each pixel of the input image
     parameter WINDOW_SIZE = 3, // this is the height & width of the window/kernel
